@@ -8,24 +8,43 @@ Object-pascal native code, using classes only TList, TStrings and TStringList
 Example:
 
 ```pascal
-    var Json: TJson;
+var
+  Json: TJson;
+  Str: String
+begin
+  Json := TJson.Create();
 
-    //put
-    Json.Put('field1', null);
-    Json.Put('field2', True);
-    Json.Put('field3', 3.14);
-    Json.Put('field4', 'hello world');
+  //put
+  Json.Put('field1', null);
+  Json.Put('field2', True);
+  Json.Put('field3', 3.14);
+  Json.Put('field4', 'hello world');
 
-    //another way
-    Json['field5'].AsBoolean := False;
-    Json['field6'].AsString := 'hello world';
+  //another way
+  Json['field5'].AsBoolean := False;
+  Json['field6'].AsString := 'hello world';
 
-    //get
-    Str := Json['field4'].AsString;
+  //object
+  with Json['field7'].AsObject do
+  begin
+    Put('subfield1', 2.7182818284);
+    Put('subfield2', 'json4delphi');
+  end;
 
-    //parse
-    Json.Parse('{"a":1}');
+  //array
+  with Json['field8'].AsArray do
+  begin
+    Put(6.6260755e-34);
+    Put('The magic words are squeamish ossifrage');
+  end;
 
-    //stringify
-    Str := Json.Stringify;
+  //get
+  Str := Json['field4'].AsString;
+
+  //parse
+  Json.Parse('{"a":1}');
+
+  //stringify
+  Str := Json.Stringify;
+end;
 ```
