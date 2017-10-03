@@ -309,61 +309,108 @@ type
 
 implementation
 
+{$ifndef fpc}
+  {$if not defined(CompilerVersion) or (CompilerVersion < 15)}
+       {$define fixfloattostrreplace}
+  {$ifend}
+{$endif}
+
 {**
  * Fixed FloatToStr to convert DecimalSeparator to dot (.) decimal separator, FloatToStr returns
  * DecimalSeparator as decimal separator, but JSON uses dot (.) as decimal separator.
  *}
 function FixedFloatToStr(const Value: Extended): string;
-var
-  S: string;
-begin
-  try
-    S := FloatToStr(Value);
-    if (DecimalSeparator <> '.') and (Pos(DecimalSeparator, S) <> 0) then
-      Result := StringReplace(S, DecimalSeparator, '.', [rfReplaceAll])
-    else
-      Result := S;
-  finally
-    SetLength(S, 0);
+{$ifdef fixfloattostrreplace}
+  var
+    S: string;
+  begin
+    try
+      S := FloatToStr(Value);
+      if (DecimalSeparator <> '.') and (Pos(DecimalSeparator, S) <> 0) then
+        Result := StringReplace(S, DecimalSeparator, '.', [rfReplaceAll])
+      else
+        Result := S;
+    finally
+      SetLength(S, 0);
+    end;
   end;
-end;
+{$else}
+  var
+    LFormatSettings: TFormatSettings;
+  begin
+    LFormatSettings := DefaultFormatSettings;
+    with LFormatSettings do
+    begin
+      DecimalSeparator:= '.';
+    end;
+    Result := FloatToStr(Value, LFormatSettings);
+  end;
+{$endif}
 
 {**
  * Fixed TryStrToFloat to convert dot (.) decimal separator to DecimalSeparator, TryStrToFloat expects
  * decimal separator to be DecimalSeparator, but JSON uses dot (.) as decimal separator.
  *}
 function FixedTryStrToFloat(const S: string; out Value: Extended): Boolean;
-var
-  FixedS: string;
-begin
-  try
-    if (DecimalSeparator <> '.') and (Pos('.', S) <> 0) then
-      FixedS := StringReplace(S, '.', DecimalSeparator, [rfReplaceAll])
-    else
-      FixedS := S;
-    Result := TryStrToFloat(FixedS, Value);
-  finally
-    SetLength(FixedS, 0);
+{$ifdef fixfloattostrreplace}
+  var
+    FixedS: string;
+  begin
+    try
+      if (DecimalSeparator <> '.') and (Pos('.', S) <> 0) then
+        FixedS := StringReplace(S, '.', DecimalSeparator, [rfReplaceAll])
+      else
+        FixedS := S;
+      Result := TryStrToFloat(FixedS, Value);
+    finally
+      SetLength(FixedS, 0);
+    end;
   end;
-end;
+{$else}
+  var
+    LFormatSettings: TFormatSettings;
+  begin
+    LFormatSettings := DefaultFormatSettings;
+    with LFormatSettings do
+    begin
+      DecimalSeparator:= '.';
+    end;
+    Result := TryStrToFloat(S, Value, LFormatSettings);
+  end;
+{$endif}
+
 {**
  * Fixed StrToFloat to convert dot (.) decimal separator to DecimalSeparator, StrToFloat expects
  * decimal separator to be DecimalSeparator, but JSON uses dot (.) as decimal separator.
  *}
 function FixedStrToFloat(const S: string): Extended;
-var
-  FixedS: string;
-begin
-  try
-    if (DecimalSeparator <> '.') and (Pos('.', S) <> 0) then
-      FixedS := StringReplace(S, '.', DecimalSeparator, [rfReplaceAll])
-    else
-      FixedS := S;
-    Result := StrToFloat(FixedS);
-  finally
-    SetLength(FixedS, 0);
+{$ifdef fixfloattostrreplace}
+  var
+    FixedS: string;
+  begin
+    try
+      if (DecimalSeparator <> '.') and (Pos('.', S) <> 0) then
+        FixedS := StringReplace(S, '.', DecimalSeparator, [rfReplaceAll])
+      else
+        FixedS := S;       4bu3l1n - M151ngu1
+
+      Result := StrToFloat(FixedS);
+    finally
+      SetLength(FixedS, 0);
+    end;
   end;
-end;
+{$else}
+  var
+    LFormatSettings: TFormatSettings;
+  begin
+    LFormatSettings := DefaultFormatSettings;
+    with LFormatSettings do
+    begin
+      DecimalSeparator:= '.';
+    end;
+    Result := StrToFloat(S, LFormatSettings);
+  end;
+{$endif}
 
 { TJsonBase }
 
@@ -935,7 +982,7 @@ var
 begin
   for I := 0 to FList.Count - 1 do
   begin
-    Item := FList[I];
+    Item := TJsonValue(FList[I]);
     Item.Free;
   end;
   FList.Clear;
@@ -951,7 +998,7 @@ procedure TJsonArray.Delete(const Index: Integer);
 var
   Item: TJsonValue;
 begin
-  Item := FList[Index];
+  Item := TJsonValue(FList[Index]);
   Item.Free;
   FList.Delete(Index);
 end;
@@ -970,7 +1017,7 @@ end;
 
 function TJsonArray.GetItems(Index: Integer): TJsonValue;
 begin
-  Result := FList[Index];
+  Result := TJsonValue(FList[Index]);
 end;
 
 function TJsonArray.Insert(const Index: Integer): TJsonValue;
@@ -1072,7 +1119,7 @@ begin
   Result := '[';
   for I := 0 to FList.Count - 1 do
   begin
-    Item := FList[I];
+    Item := TJsonValue(FList[I]);
     if I > 0 then Result := Result + ',';
     Result := Result + Item.Stringify;
   end;
@@ -1158,7 +1205,7 @@ var
 begin
   for I := 0 to FList.Count - 1 do
   begin
-    Item := FList[I];
+    Item := TJsonPair(FList[I]);
     Item.Free;
   end;
   FList.Clear;
@@ -1175,7 +1222,7 @@ procedure TJsonObject.Delete(const Index: Integer);
 var
   Item: TJsonPair;
 begin
-  Item := FList[Index];
+  Item := TJsonPair(FList[Index]);
   Item.Free;
   FList.Delete(Index);
 end;
@@ -1204,7 +1251,7 @@ begin
   Result := -1;
   for I := 0 to FList.Count - 1 do
   begin
-    Pair := FList[I];
+    Pair := TJsonPair(FList[I]);
     if SameText(Name, Pair.Name) then
     begin
       Result := I;
@@ -1220,7 +1267,7 @@ end;
 
 function TJsonObject.GetItems(Index: Integer): TJsonPair;
 begin
-  Result := FList[Index];
+  Result := TJsonPair(FList[Index]);
 end;
 
 function TJsonObject.GetValues(Name: String): TJsonValue;
@@ -1234,7 +1281,7 @@ begin
     if not FAutoAdd then RaiseError(Format('%s not found', [Name]));
     Pair := Add(Name);
   end
-  else Pair := FList[Index];
+  else Pair := TJsonPair(FList[Index]);
   Result := Pair.Value;
 end;
 
@@ -1355,7 +1402,7 @@ begin
   Result := '{';
   for I := 0 to FList.Count - 1 do
   begin
-    Item := FList[I];
+    Item := TJsonPair(FList[I]);
     if I > 0 then Result := Result + ',';
     Result := Result + Item.Stringify;
   end;
