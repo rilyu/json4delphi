@@ -392,7 +392,7 @@ function FixedStrToFloat(const S: string): Extended;
       if (DecimalSeparator <> '.') and (Pos('.', S) <> 0) then
         FixedS := StringReplace(S, '.', DecimalSeparator, [rfReplaceAll])
       else
-        FixedS := S;       4bu3l1n - M151ngu1
+        FixedS := S;
 
       Result := StrToFloat(FixedS);
     finally
