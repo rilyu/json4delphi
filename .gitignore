@@ -1,7 +1,0 @@
-
-*.identcache
-*.local
-*.dcu
-*.exe
-test/TestJson.res
-test/TestJson.dproj
