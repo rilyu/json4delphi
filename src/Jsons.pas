@@ -28,6 +28,8 @@ THE SOFTWARE.
 202008 - Add - MaiconSoft - JsonArray.Put support multiples values at same time
 202008 - Fix - MaiconSoft - Put without parameter will be 'empty' by default
 202008 - Add - MaiconSoft - Add 'Pretty', stringify version for human read
+202008 - Add - MaiconSoft - Add 'Foreatch' in TJsonArray
+202008 - Add - MaiconSoft - Add TJsonArray export to TArray<T> (filter invalid values)
 
 ****************************************************************************}
 
@@ -161,6 +163,11 @@ type
       TJsonArray; overload;
     procedure Delete(const Index: Integer);
     procedure Clear;
+    procedure Foreatch(func: TProc<Integer, TJsonValue>);
+    function AsInteger: TArray<Integer>;
+    function AsString: TArray<string>;
+    function AsBoolean: TArray<Boolean>;
+    function AsExtended: TArray<Extended>;
   public
     property Count: Integer read GetCount;
     property Items[Index: Integer]: TJsonValue read GetItems; default;
@@ -978,6 +985,78 @@ begin
   FList.Add(Result);
 end;
 
+function TJsonArray.AsBoolean: TArray<Boolean>;
+var
+  Acount: Integer;
+  buffer: TArray<Boolean>;
+begin
+  if count = 0 then
+    exit;
+
+  SetLength(buffer, count);
+
+  Acount := 0;
+  Foreatch(
+    procedure(Index: integer; Item: TJsonValue)
+    begin
+      if Item.ValueType = jvBoolean then
+      begin
+        buffer[Acount] := Item.AsBoolean;
+        inc(Acount);
+      end;
+    end);
+  SetLength(buffer, Acount);
+  Result := buffer;
+end;
+
+function TJsonArray.AsExtended: TArray<Extended>;
+var
+  Acount: Integer;
+  buffer: TArray<Extended>;
+begin
+  if count = 0 then
+    exit;
+
+  SetLength(buffer, count);
+
+  Acount := 0;
+  Foreatch(
+    procedure(Index: integer; Item: TJsonValue)
+    begin
+      if Item.ValueType = jvNumber then
+      begin
+        buffer[Acount] := Item.AsNumber;
+        inc(Acount);
+      end;
+    end);
+  SetLength(buffer, Acount);
+  Result := buffer;
+end;
+
+function TJsonArray.AsInteger: TArray<Integer>;
+var
+  Acount: Integer;
+  buffer: TArray<Integer>;
+begin
+  if count = 0 then
+    exit;
+
+  SetLength(buffer, count);
+
+  Acount := 0;
+  Foreatch(
+    procedure(Index: integer; Item: TJsonValue)
+    begin
+      if Item.ValueType = jvNumber then
+      begin
+        buffer[Acount] := Item.AsInteger;
+        inc(Acount);
+      end;
+    end);
+  SetLength(buffer, Acount);
+  Result := buffer;
+end;
+
 procedure TJsonArray.Assign(Source: TJsonBase);
 var
   Src: TJsonArray;
@@ -989,6 +1068,30 @@ begin
   Src := Source as TJsonArray;
   for I := 0 to Src.Count - 1 do
     Add.Assign(Src[I]);
+end;
+
+function TJsonArray.AsString: TArray<string>;
+var
+  Acount: Integer;
+  buffer: TArray<string>;
+begin
+  if count = 0 then
+    exit;
+
+  SetLength(buffer, count);
+
+  Acount := 0;
+  Foreatch(
+    procedure(Index: integer; Item: TJsonValue)
+    begin
+      if Item.ValueType = jvString then
+      begin
+        buffer[Acount] := Item.Asstring;
+        inc(Acount);
+      end;
+    end);
+  SetLength(buffer, Acount);
+  Result := buffer;
 end;
 
 procedure TJsonArray.Clear;
@@ -1024,6 +1127,15 @@ begin
   Clear;
   FList.Free;
   inherited;
+end;
+
+procedure TJsonArray.Foreatch(func: TProc<Integer, TJsonValue>);
+var
+  i: Integer;
+begin
+  if Assigned(func) then
+    for i := 0 to FList.Count - 1 do
+      func(i, TJsonValue(FList[i]));
 end;
 
 function TJsonArray.GetCount: Integer;

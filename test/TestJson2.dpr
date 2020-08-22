@@ -27,6 +27,21 @@ begin
       'The magic words are squeamish ossifrage', TJsonPair.New('array-object-field-1',
       null), TJsonPair.New('array-object-field-2', 'json4delphi')]);
 
+    Json['array-field'].AsArray.Foreatch(
+      procedure(Index: Integer; Item: TJsonValue)
+      begin
+        Writeln(Item.Stringify);
+      end);
+
+    Writeln;
+
+    for Str in Json['array-field'].AsArray.AsString do
+    begin
+      Writeln(Str);
+    end;
+
+    Writeln;
+
     with Json.Put('object-field', empty).AsObject do
     begin
       Put('object-field-1', True);
