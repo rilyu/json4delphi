@@ -745,6 +745,7 @@ end;
 procedure TJsonValue.Parse(JsonString: String);
 begin
   Clear;
+  JsonString := Trim(JsonString);
   FValueType := AnalyzeJsonValueType(JsonString);
   case FValueType of
     jvNone: RaiseParseError(JsonString);
