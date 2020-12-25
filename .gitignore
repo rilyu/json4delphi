@@ -1,0 +1,10 @@
+test/__recovery/
+test/__history/
+src/__recovery/
+src/__history/
+*.dcu
+*.exe
+*.res
+*.identcache
+*.local
+*.dproj
