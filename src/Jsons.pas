@@ -44,23 +44,23 @@ type
   TJsonEmpty = (empty);
 
 type
+  TJsonValue = class;
   TJsonBase = class(TObject)
   private
-    FOwner: TJsonBase;
-    function GetOwner: TJsonBase;
-
+    FOwner : TJsonBase;
+    function  GetOwner: TJsonBase;
+    procedure InternalStringify(Stream:TStringStream;AName:string;AValue:TJsonValue);
   protected
     function GetOwnerName: String;
     procedure RaiseError(const Msg: String);
     procedure RaiseParseError(const JsonString: String);
     procedure RaiseAssignError(Source: TJsonBase);
-
   public
     constructor Create(AOwner: TJsonBase);
     destructor Destroy; override;
 
     procedure Parse(JsonString: String); virtual; abstract;
-    function Stringify: String; virtual; abstract;
+    function  Stringify:string;virtual;
 
     procedure Assign(Source: TJsonBase); virtual; abstract;
 
@@ -113,13 +113,11 @@ type
 
   protected
     procedure RaiseValueTypeError(const AsValueType: TJsonValueType);
-
   public
     constructor Create(AOwner: TJsonBase);
     destructor Destroy; override;
 
     procedure Parse(JsonString: String); override;
-    function Stringify: String; override;
 
     procedure Assign(Source: TJsonBase); override;
 
@@ -148,7 +146,6 @@ type
     destructor Destroy; override;
 
     procedure Parse(JsonString: String); override;
-    function Stringify: String; override;
 
     procedure Assign(Source: TJsonBase); override;
     procedure Merge(Addition: TJsonArray);
@@ -187,7 +184,6 @@ type
     destructor Destroy; override;
 
     procedure Parse(JsonString: String); override;
-    function Stringify: String; override;
 
     procedure Assign(Source: TJsonBase); override;
 
@@ -209,7 +205,6 @@ type
     destructor Destroy; override;
 
     procedure Parse(JsonString: String); override;
-    function Stringify: String; override;
 
     procedure Assign(Source: TJsonBase); override;
     procedure Merge(Addition: TJsonObject);
@@ -357,12 +352,13 @@ function TJsonBase.Decode(const S: String): String;
   end;
 
 var
-  I: Integer;
-  C: Char;
-  ubuf : integer;
+  I      : Integer;
+  C      : Char;
+  ubuf   : integer;
+  Stream : TStringStream;
 begin
-  Result := '';
-  I := 1;
+  Stream := TStringStream.Create;
+  I      := 1;
   while I <= Length(S) do
   begin
     C := S[I];
@@ -372,23 +368,25 @@ begin
       C := S[I];
       Inc(I);
       case C of
-        'b': Result := Result + #8;
-        't': Result := Result + #9;
-        'n': Result := Result + #10;
-        'f': Result := Result + #12;
-        'r': Result := Result + #13;
+        'b': Stream.WriteString(#8);
+        't': Stream.WriteString(#9);
+        'n': Stream.WriteString(#10);
+        'f': Stream.WriteString(#12);
+        'r': Stream.WriteString(#13);
         'u':
         begin
           if not TryStrToInt('$' + Copy(S, I, 4), ubuf) then
             raise Exception.Create(format('Invalid unicode \u%s',[Copy(S, I, 4)]));
-          result := result + WideChar(ubuf);
+          Stream.WriteString(WideChar(ubuf));
           Inc(I, 4);
         end;
-        else Result := Result + C;
+        else Stream.WriteString(C);
       end;
     end
-    else Result := Result + C;
+    else Stream.WriteString(C);
   end;
+  Result := Stream.DataString;
+  Stream.Free;
 end;
 
 destructor TJsonBase.Destroy;
@@ -398,37 +396,39 @@ end;
 
 function TJsonBase.Encode(const S: String): String;
 var
-  I, UnicodeValue : Integer;
-  C: Char;
+  I            ,
+  UnicodeValue : Integer;
+  C            : Char;
+  Stream       : TStringStream;
 begin
-  Result := '';
+  Stream := TStringStream.Create;
   for I := 1 to Length(S) do
   begin
     C := S[I];
     case C of
-      '"':Result := Result + '\' + C;
-      '\': Result := Result + '\' + C;
-      '/': Result := Result + '\' + C;
-      #8: Result := Result + '\b';
-      #9: Result := Result + '\t';
-      #10: Result := Result + '\n';
-      #12: Result := Result + '\f';
-      #13: Result := Result + '\r';
+      '"': Stream.WriteString('\'+C);
+      '\': Stream.WriteString('\'+C);
+      '/': Stream.WriteString('\'+C);
+      #8: Stream.WriteString('\b');
+      #9: Stream.WriteString('\t');
+      #10: Stream.WriteString('\n');
+      #12: Stream.WriteString('\f');
+      #13: Stream.WriteString('\r');
       else
       if (C < WideChar(32)) or (C > WideChar(127)) then
       begin
-        Result := result + '\u';
+        Stream.WriteString('\u');
         UnicodeValue := Ord(C);
-        Result := result + lowercase(IntToHex((UnicodeValue and 61440) shr 12,1));
-        Result := result + lowercase(IntToHex((UnicodeValue and 3840) shr 8,1));
-        Result := result + lowercase(IntToHex((UnicodeValue and 240) shr 4,1));
-        Result := result + lowercase(IntToHex((UnicodeValue and 15),1));
+        Stream.WriteString(lowercase(IntToHex((UnicodeValue and 61440) shr 12,1)));
+        Stream.WriteString(lowercase(IntToHex((UnicodeValue and 3840) shr 8,1)));
+        Stream.WriteString(lowercase(IntToHex((UnicodeValue and 240) shr 4,1)));
+        Stream.WriteString(lowercase(IntToHex((UnicodeValue and 15),1)));
       end
-      else
-       Result := Result + C;
-
+      else Stream.WriteString(C);
     end;
   end;
+  Result := Stream.DataString;
+  Stream.Free;
 end;
 
 function TJsonBase.GetOwner: TJsonBase;
@@ -452,6 +452,60 @@ begin
     end
     else TheOwner := TheOwner.Owner;
   end;
+end;
+
+procedure TJsonBase.InternalStringify(Stream:TStringStream;AName:string;AValue:TJsonValue);
+const
+  StrBoolean : array[Boolean] of string = ('false', 'true');
+procedure ObjectStringify(JsonObject:Jsons.TJsonObject);
+var
+  i    : Integer;
+  Item : TJsonPair;
+begin
+  Stream.WriteString('{');
+  for i:=0 to JsonObject.Count-1 do
+  begin
+    Item := JsonObject.Items[i];
+    if i>0 then Stream.WriteString(',');
+    InternalStringify(Stream,Item.Name,Item.Value);
+  end;
+  Stream.WriteString('}');
+end;
+procedure ArrayStringify(JsonArray:Jsons.TJsonArray);
+var
+  i    : Integer;
+  Item : TJsonValue;
+begin
+  Stream.WriteString('[');
+  for i:=0 to JsonArray.Count-1 do
+  begin
+    Item := JsonArray.Items[i];
+    if i>0 then Stream.WriteString(',');
+    InternalStringify(Stream,'',Item);
+  end;
+  Stream.WriteString(']');
+end;
+begin
+  if AName<>'' then Stream.WriteString('"'+AValue.Encode(AName)+'":');
+  case AValue.ValueType of
+    jvNone    ,
+    jvNull    : Stream.WriteString('null');
+    jvString  : Stream.WriteString('"'+AValue.Encode(AValue.AsString)+'"');
+    jvNumber  : Stream.WriteString(FixedFloatToStr(AValue.AsNumber));
+    jvBoolean : Stream.WriteString(StrBoolean[AValue.AsBoolean]);
+    jvObject  : ObjectStringify(AValue.AsObject);
+    jvArray   : ArrayStringify(AValue.AsArray);
+  end;
+end;
+
+function TJsonBase.Stringify:string;
+var
+  Stream : TStringStream;
+begin
+  Stream := TStringStream.Create;
+  InternalStringify(Stream,'',TJsonValue(Self));
+  Result := Stream.DataString;
+  Stream.Free;
 end;
 
 function TJsonBase.IsJsonArray(const S: String): Boolean;
@@ -855,21 +909,6 @@ begin
   end;
 end;
 
-function TJsonValue.Stringify: String;
-const
-  StrBoolean: array[Boolean] of String = ('false', 'true');
-begin
-  Result := '';
-  case FValueType of
-    jvNone, jvNull: Result := 'null';
-    jvString: Result := '"' + Encode(FStringValue) + '"';
-    jvNumber: Result := FixedFloatToStr(FNumberValue);
-    jvBoolean: Result := StrBoolean[FBooleanValue];
-    jvObject: Result := FObjectValue.Stringify;
-    jvArray: Result := FArrayValue.Stringify;
-  end;
-end;
-
 { TJsonArray }
 
 function TJsonArray.Add: TJsonValue;
@@ -1025,21 +1064,6 @@ begin
   Result.Assign(Value);
 end;
 
-function TJsonArray.Stringify: String;
-var
-  I: Integer;
-  Item: TJsonValue;
-begin
-  Result := '[';
-  for I := 0 to FList.Count - 1 do
-  begin
-    Item := TJsonValue(FList[I]);
-    if I > 0 then Result := Result + ',';
-    Result := Result + Item.Stringify;
-  end;
-  Result := Result + ']';
-end;
-
 { TJsonPair }
 
 procedure TJsonPair.Assign(Source: TJsonBase);
@@ -1086,11 +1110,6 @@ end;
 procedure TJsonPair.SetName(const Value: String);
 begin
   FName := Value;
-end;
-
-function TJsonPair.Stringify: String;
-begin
-  Result := Format('"%s":%s', [Encode(FName), FValue.Stringify]);
 end;
 
 { TJsonObject }
@@ -1306,21 +1325,6 @@ function TJsonObject.Put(const Name: String;
 begin
   Result := Add(Name).Value;
   Result.Assign(Value);
-end;
-
-function TJsonObject.Stringify: String;
-var
-  I: Integer;
-  Item: TJsonPair;
-begin
-  Result := '{';
-  for I := 0 to FList.Count - 1 do
-  begin
-    Item := TJsonPair(FList[I]);
-    if I > 0 then Result := Result + ',';
-    Result := Result + Item.Stringify;
-  end;
-  Result := Result + '}';
 end;
 
 { TJson }
