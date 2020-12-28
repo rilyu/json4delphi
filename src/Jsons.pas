@@ -352,12 +352,13 @@ function TJsonBase.Decode(const S: String): String;
   end;
 
 var
-  I: Integer;
-  C: Char;
-  ubuf : integer;
+  I      : Integer;
+  C      : Char;
+  ubuf   : integer;
+  Stream : TStringStream;
 begin
-  Result := '';
-  I := 1;
+  Stream := TStringStream.Create;
+  I      := 1;
   while I <= Length(S) do
   begin
     C := S[I];
@@ -367,23 +368,25 @@ begin
       C := S[I];
       Inc(I);
       case C of
-        'b': Result := Result + #8;
-        't': Result := Result + #9;
-        'n': Result := Result + #10;
-        'f': Result := Result + #12;
-        'r': Result := Result + #13;
+        'b': Stream.WriteString(#8);
+        't': Stream.WriteString(#9);
+        'n': Stream.WriteString(#10);
+        'f': Stream.WriteString(#12);
+        'r': Stream.WriteString(#13);
         'u':
         begin
           if not TryStrToInt('$' + Copy(S, I, 4), ubuf) then
             raise Exception.Create(format('Invalid unicode \u%s',[Copy(S, I, 4)]));
-          result := result + WideChar(ubuf);
+          Stream.WriteString(WideChar(ubuf));
           Inc(I, 4);
         end;
-        else Result := Result + C;
+        else Stream.WriteString(C);
       end;
     end
-    else Result := Result + C;
+    else Stream.WriteString(C);
   end;
+  Result := Stream.DataString;
+  Stream.Free;
 end;
 
 destructor TJsonBase.Destroy;
@@ -393,37 +396,39 @@ end;
 
 function TJsonBase.Encode(const S: String): String;
 var
-  I, UnicodeValue : Integer;
-  C: Char;
+  I            ,
+  UnicodeValue : Integer;
+  C            : Char;
+  Stream       : TStringStream;
 begin
-  Result := '';
+  Stream := TStringStream.Create;
   for I := 1 to Length(S) do
   begin
     C := S[I];
     case C of
-      '"':Result := Result + '\' + C;
-      '\': Result := Result + '\' + C;
-      '/': Result := Result + '\' + C;
-      #8: Result := Result + '\b';
-      #9: Result := Result + '\t';
-      #10: Result := Result + '\n';
-      #12: Result := Result + '\f';
-      #13: Result := Result + '\r';
+      '"': Stream.WriteString('\'+C);
+      '\': Stream.WriteString('\'+C);
+      '/': Stream.WriteString('\'+C);
+      #8: Stream.WriteString('\b');
+      #9: Stream.WriteString('\t');
+      #10: Stream.WriteString('\n');
+      #12: Stream.WriteString('\f');
+      #13: Stream.WriteString('\r');
       else
       if (C < WideChar(32)) or (C > WideChar(127)) then
       begin
-        Result := result + '\u';
+        Stream.WriteString('\u');
         UnicodeValue := Ord(C);
-        Result := result + lowercase(IntToHex((UnicodeValue and 61440) shr 12,1));
-        Result := result + lowercase(IntToHex((UnicodeValue and 3840) shr 8,1));
-        Result := result + lowercase(IntToHex((UnicodeValue and 240) shr 4,1));
-        Result := result + lowercase(IntToHex((UnicodeValue and 15),1));
+        Stream.WriteString(lowercase(IntToHex((UnicodeValue and 61440) shr 12,1)));
+        Stream.WriteString(lowercase(IntToHex((UnicodeValue and 3840) shr 8,1)));
+        Stream.WriteString(lowercase(IntToHex((UnicodeValue and 240) shr 4,1)));
+        Stream.WriteString(lowercase(IntToHex((UnicodeValue and 15),1)));
       end
-      else
-       Result := Result + C;
-
+      else Stream.WriteString(C);
     end;
   end;
+  Result := Stream.DataString;
+  Stream.Free;
 end;
 
 function TJsonBase.GetOwner: TJsonBase;
