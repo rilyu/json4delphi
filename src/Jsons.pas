@@ -486,9 +486,10 @@ begin
   Stream.WriteString(']');
 end;
 begin
+  if AValue.IsEmpty then Exit;
   if AName<>'' then Stream.WriteString('"'+AValue.Encode(AName)+'":');
   case AValue.ValueType of
-    jvNone    ,
+    jvNone    : ;
     jvNull    : Stream.WriteString('null');
     jvString  : Stream.WriteString('"'+AValue.Encode(AValue.AsString)+'"');
     jvNumber  : Stream.WriteString(FixedFloatToStr(AValue.AsNumber));
