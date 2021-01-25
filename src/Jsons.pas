@@ -466,8 +466,11 @@ begin
   for i:=0 to JsonObject.Count-1 do
   begin
     Item := JsonObject.Items[i];
-    if i>0 then Stream.WriteString(',');
-    InternalStringify(Stream,Item.Name,Item.Value);
+    if Item.Value.ValueType<>jvNone then
+    begin
+      if i>0 then Stream.WriteString(',');
+      InternalStringify(Stream,Item.Name,Item.Value);
+    end;
   end;
   Stream.WriteString('}');
 end;
@@ -480,8 +483,11 @@ begin
   for i:=0 to JsonArray.Count-1 do
   begin
     Item := JsonArray.Items[i];
-    if i>0 then Stream.WriteString(',');
-    InternalStringify(Stream,'',Item);
+    if Item.ValueType<>jvNone then
+    begin
+      if i>0 then Stream.WriteString(',');
+      InternalStringify(Stream,'',Item);
+    end;
   end;
   Stream.WriteString(']');
 end;
