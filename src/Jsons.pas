@@ -459,36 +459,49 @@ const
   StrBoolean : array[Boolean] of string = ('false', 'true');
 procedure ObjectStringify(JsonObject:Jsons.TJsonObject);
 var
-  i    : Integer;
+  i    ,
+  cnt  : Integer;
   Item : TJsonPair;
 begin
+  cnt := 0;
   Stream.WriteString('{');
   for i:=0 to JsonObject.Count-1 do
   begin
     Item := JsonObject.Items[i];
-    if i>0 then Stream.WriteString(',');
-    InternalStringify(Stream,Item.Name,Item.Value);
+    if Item.Value.ValueType<>jvNone then
+    begin
+      if cnt>0 then Stream.WriteString(',');
+      InternalStringify(Stream,Item.Name,Item.Value);
+      Inc(cnt);
+    end;
   end;
   Stream.WriteString('}');
 end;
 procedure ArrayStringify(JsonArray:Jsons.TJsonArray);
 var
-  i    : Integer;
+  i    ,
+  cnt  : Integer;
   Item : TJsonValue;
 begin
+  cnt := 0;
   Stream.WriteString('[');
   for i:=0 to JsonArray.Count-1 do
   begin
     Item := JsonArray.Items[i];
-    if i>0 then Stream.WriteString(',');
-    InternalStringify(Stream,'',Item);
+    if Item.ValueType<>jvNone then
+    begin
+      if cnt>0 then Stream.WriteString(',');
+      InternalStringify(Stream,'',Item);
+      Inc(cnt);
+    end;
   end;
   Stream.WriteString(']');
 end;
 begin
+  if AValue.IsEmpty then Exit;
   if AName<>'' then Stream.WriteString('"'+AValue.Encode(AName)+'":');
   case AValue.ValueType of
-    jvNone    ,
+    jvNone    : ;
     jvNull    : Stream.WriteString('null');
     jvString  : Stream.WriteString('"'+AValue.Encode(AValue.AsString)+'"');
     jvNumber  : Stream.WriteString(FixedFloatToStr(AValue.AsNumber));
