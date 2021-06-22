@@ -144,8 +144,8 @@ begin
   else
   begin
     FixedS := StringReplace( S,
-                             GLB_JSON_STD_DECIMALSEPARATOR,
                              JsonsUtils_GLB_DECIMALSEPARATOR,
+                             GLB_JSON_STD_DECIMALSEPARATOR,
                              [rfReplaceAll]);
     Result := TryStrToFloat(FixedS, Value);
   end;
@@ -166,8 +166,8 @@ begin
   else
   begin
     FixedS := StringReplace( S,
-                             GLB_JSON_STD_DECIMALSEPARATOR,
                              JsonsUtils_GLB_DECIMALSEPARATOR,
+                             GLB_JSON_STD_DECIMALSEPARATOR,
                              [rfReplaceAll]);
     Result := StrToFloat(FixedS);
   end;
