@@ -115,6 +115,12 @@ function FixedFloatToStr(const Value: Extended): string;
 var
   lS: string;
 begin
+  lS := FloatToStr(Frac(Value));
+  if LS='0' then
+  begin
+    Result := IntToStr(Int64(Trunc(Value)));
+    Exit;
+  end;
   lS := FloatToStr(Value);
   if JsonsUtils_GLB_DECIMALSEPARATOR = GLB_JSON_STD_DECIMALSEPARATOR then
   begin
