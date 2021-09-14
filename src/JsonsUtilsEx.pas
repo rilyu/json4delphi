@@ -111,14 +111,14 @@ begin
 end;
 
 
-function FixedFloatToStr(const Value: Extended): string;
+function FixedFloatToStr(const Value:Extended):string;
 var
-  lS: string;
+  lS : string;
 begin
-  if Abs(Value)<=High(UInt64) then
+  if Abs(Value)<=MAX_SAFE_INTEGER then
   begin
     lS := FloatToStr(Frac(Value));
-    if LS='0' then
+    if lS='0' then
     begin
       Result := IntToStr(Int64(Trunc(Value)));
       Exit;

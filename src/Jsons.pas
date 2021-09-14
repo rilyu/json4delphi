@@ -25,7 +25,10 @@ unit Jsons;
 {$MODE Delphi}
 {$ENDIF}
 interface
-uses Classes, SysUtils, jsonsutilsEx;
+uses
+  Classes, SysUtils, jsonsutilsEx;
+const
+  MAX_SAFE_INTEGER  = 9007199254740991;
 type
   TJsonValueType = (jvNone, jvNull, jvString, jvNumber, jvBoolean, jvObject, jvArray);
   TJsonStructType = (jsNone, jsArray, jsObject);
