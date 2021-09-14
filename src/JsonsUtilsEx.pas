@@ -30,6 +30,7 @@ Var
 implementation
 
 Uses TypInfo,
+     Math,
      DateUtils,
      Jsons;
 
@@ -170,7 +171,7 @@ var
 begin
   if JsonsUtils_GLB_DECIMALSEPARATOR = GLB_JSON_STD_DECIMALSEPARATOR then
   begin
-    Result := StrToFloat(S);
+    if not TryStrToFloat(S,Result) then Result := NAN;
   end
   else
   begin
@@ -178,7 +179,7 @@ begin
                              JsonsUtils_GLB_DECIMALSEPARATOR,
                              GLB_JSON_STD_DECIMALSEPARATOR,
                              [rfReplaceAll]);
-    Result := StrToFloat(FixedS);
+    if not TryStrToFloat(FixedS,Result) then Result := NAN;
   end;
 end;
 
